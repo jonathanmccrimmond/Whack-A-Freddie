@@ -10,7 +10,7 @@
         body {
             margin: 0;
             padding: 0;
-            background-color: #050505;
+            background-color: #0a0a0a;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -23,7 +23,7 @@
             height: 100%;
             max-width: 100vw;
             max-height: 100vh;
-            box-shadow: 0 0 100px rgba(0,0,0,0.8);
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
         }
     </style>
 </head>
@@ -42,10 +42,7 @@
         };
 
         const DEPTH = {
-            BG_BASE: -20,
-            BG_NEBULA: -15,
-            BG_STARS: -12,
-            BG_PLANETS: -11,
+            BACKGROUND: -10,
             VIGNETTE: -9,
             GRID_SHADOW: -8,
             HOLES: -7,
@@ -54,119 +51,14 @@
             UI: 10
         };
 
-        // --- VISUAL UTILITY HELPERS ---
-        function createSpaceBackground(scene) {
-            const { width, height } = scene.cameras.main;
-
-            // 1. Base Gradient
-            const bg = scene.add.graphics();
-            bg.fillGradientStyle(0x050508, 0x050508, 0x1a1a2e, 0x16213e, 1);
-            bg.fillRect(0, 0, width, height);
-            bg.setDepth(DEPTH.BG_BASE).setScrollFactor(0);
-
-            // 2. Nebula Haze (Subtle blobs)
-            const colors = [0x4834d4, 0x686de0, 0xbe2edd];
-            for(let i=0; i<5; i++) {
-                const haze = scene.add.graphics();
-                haze.fillStyle(Phaser.Utils.Array.GetRandom(colors), 0.04);
-                haze.fillCircle(Phaser.Math.Between(0, width), Phaser.Math.Between(0, height), Phaser.Math.Between(300, 600));
-                haze.setDepth(DEPTH.BG_NEBULA);
-            }
-
-            // 3. Stars (Mixed sizes)
-            for (let i = 0; i < 150; i++) {
-                const x = Phaser.Math.Between(0, width);
-                const y = Phaser.Math.Between(0, height);
-                const size = Phaser.Math.FloatBetween(1, 3);
-                const star = scene.add.circle(x, y, size, 0xffffff, Phaser.Math.FloatBetween(0.2, 0.8));
-                star.setDepth(DEPTH.BG_STARS);
-                if(Math.random() > 0.9) {
-                    scene.tweens.add({ targets: star, alpha: 0.1, duration: Phaser.Math.Between(1000, 3000), yoyo: true, repeat: -1 });
-                }
-            }
-
-            // 4. Cartoon Planets
-            const p1 = scene.add.graphics();
-            p1.fillStyle(0xff7979, 1);
-            p1.fillCircle(200, 400, 60);
-            p1.fillStyle(0x000000, 0.2); // Shadow
-            p1.fillCircle(180, 420, 40);
-            p1.setDepth(DEPTH.BG_PLANETS);
-            
-            const p2 = scene.add.graphics();
-            p2.fillStyle(0x4834d4, 1);
-            p2.fillCircle(width - 150, 800, 40);
-            p2.setDepth(DEPTH.BG_PLANETS);
-
-            // 5. Shooting Star Logic
-            scene.time.addEvent({
-                delay: 7000,
-                callback: () => {
-                    const startX = Phaser.Math.Between(0, width);
-                    const startY = Phaser.Math.Between(0, height/2);
-                    const sStar = scene.add.circle(startX, startY, 2, 0xffffff);
-                    scene.tweens.add({
-                        targets: sStar,
-                        x: startX + 400,
-                        y: startY + 200,
-                        alpha: 0,
-                        duration: 800,
-                        onComplete: () => sStar.destroy()
-                    });
-                },
-                loop: true
-            });
-        }
-
-        function createPremiumButton(scene, x, y, label, callback) {
-            const container = scene.add.container(x, y);
-            
-            // Shadow / Underside
-            const shadow = scene.add.roundedRect(4, 8, 600, 160, 30, 0x006266);
-            
-            // Main Body
-            const body = scene.add.graphics();
-            body.fillStyle(0x00d2d3, 1);
-            body.fillRoundedRect(-300, -80, 600, 160, 30);
-            body.lineStyle(4, 0xffffff, 0.3);
-            body.strokeRoundedRect(-300, -80, 600, 160, 30);
-            
-            // Gloss Highlight Strip
-            const gloss = scene.add.graphics();
-            gloss.fillStyle(0xffffff, 0.2);
-            gloss.fillRoundedRect(-280, -70, 560, 40, 20);
-
-            const text = scene.add.text(0, 0, label, { 
-                fontFamily: 'Bungee', fontSize: '60px', fill: '#000' 
-            }).setOrigin(0.5);
-
-            // Sparkle
-            const sparkle = scene.add.star(-250, -40, 5, 5, 12, 0xffffff).setAlpha(0.8);
-            scene.tweens.add({ targets: sparkle, angle: 180, scale: 1.5, alpha: 0.2, duration: 2000, repeat: -1, yoyo: true });
-
-            container.add([shadow, body, gloss, text, sparkle]);
-
-            const hitArea = scene.add.rectangle(0, 0, 600, 160).setInteractive({ useHandCursor: true });
-            hitArea.on('pointerdown', () => {
-                scene.tweens.add({
-                    targets: container,
-                    scale: 0.95,
-                    y: y + 5,
-                    duration: 50,
-                    yoyo: true,
-                    onComplete: callback
-                });
-            });
-
-            return container;
-        }
-
-        // --- SCENES ---
-
+        // --- TITLE SCENE (Start Screen) ---
         class TitleScene extends Phaser.Scene {
-            constructor() { super('TitleScene'); }
+            constructor() {
+                super('TitleScene');
+            }
 
             preload() {
+                // Generate a light dot-pattern texture
                 const dotSize = 4;
                 const spacing = 64;
                 const canvas = this.textures.createCanvas('pattern', spacing, spacing);
@@ -181,46 +73,58 @@
             create() {
                 const { width, height } = this.cameras.main;
 
-                createSpaceBackground(this);
+                // Background Gradient
+                const bg = this.add.graphics();
+                bg.fillGradientStyle(0x0f0c29, 0x0f0c29, 0x302b63, 0x24243e, 1);
+                bg.fillRect(0, 0, width, height);
 
-                // Branded Logo
-                const logoContainer = this.add.container(width / 2, height * 0.35);
-                
-                // Cyan Glow
-                const glow = this.add.text(0, 0, 'WHACK-A\nFREDDIE', {
-                    fontFamily: 'Bungee', fontSize: '140px', fill: '#00ffff', align: 'center'
-                }).setOrigin(0.5).setAlpha(0.3);
-                
-                // Main Text
-                const title = this.add.text(0, 0, 'WHACK-A\nFREDDIE', {
+                // Title Text
+                const title = this.add.text(width / 2, height * 0.35, 'WHACK-A\nFREDDIE', {
                     fontFamily: 'Bungee',
                     fontSize: '140px',
                     fill: '#ffffff',
                     stroke: '#000',
-                    strokeThickness: 18,
+                    strokeThickness: 15,
                     align: 'center'
                 }).setOrigin(0.5);
 
-                // Inner Shading simulation (Duplicate text slightly offset)
-                const shade = this.add.text(0, 5, 'WHACK-A\nFREDDIE', {
-                    fontFamily: 'Bungee', fontSize: '140px', fill: '#d1d1d1', align: 'center'
-                }).setOrigin(0.5).setDepth(-1);
+                // Start Button
+                const startBtn = this.add.container(width / 2, height * 0.65);
+                const btnBg = this.add.rectangle(0, 0, 600, 160, 0x00ffcc).setInteractive({ useHandCursor: true });
+                const btnText = this.add.text(0, 0, 'START GAME', { 
+                    fontFamily: 'Bungee', 
+                    fontSize: '60px', 
+                    fill: '#000' 
+                }).setOrigin(0.5);
                 
-                const titleSparkle = this.add.star(240, -100, 5, 8, 20, 0xffffff);
-                this.tweens.add({ targets: titleSparkle, alpha: 0.2, scale: 0.5, duration: 1000, yoyo: true, repeat: -1 });
+                startBtn.add([btnBg, btnText]);
 
-                logoContainer.add([glow, shade, title, titleSparkle]);
-
-                createPremiumButton(this, width / 2, height * 0.65, 'START GAME', () => {
-                    this.scene.start('MainScene');
+                btnBg.on('pointerdown', () => {
+                    this.tweens.add({
+                        targets: startBtn,
+                        scale: 0.9,
+                        duration: 100,
+                        yoyo: true,
+                        onComplete: () => this.scene.start('MainScene')
+                    });
                 });
 
-                this.tweens.add({ targets: logoContainer, y: logoContainer.y + 20, duration: 2500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+                this.tweens.add({
+                    targets: title,
+                    y: title.y + 30,
+                    duration: 2000,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut'
+                });
             }
         }
 
+        // --- MAIN GAMEPLAY SCENE ---
         class MainScene extends Phaser.Scene {
-            constructor() { super('MainScene'); }
+            constructor() {
+                super('MainScene');
+            }
 
             preload() {
                 this.load.image('calm', 'calm.png');
@@ -243,12 +147,18 @@
             create() {
                 const { width, height } = this.cameras.main;
 
-                createSpaceBackground(this);
+                const bg = this.add.graphics();
+                bg.fillGradientStyle(0x0f0c29, 0x0f0c29, 0x302b63, 0x24243e, 1);
+                bg.fillRect(0, 0, width, height);
+                bg.setDepth(DEPTH.BACKGROUND);
 
                 const pattern = this.add.tileSprite(0, 0, width, height, 'pattern');
-                pattern.setOrigin(0, 0).setAlpha(0.3).setDepth(DEPTH.BACKGROUND + 1);
+                pattern.setOrigin(0, 0);
+                pattern.setAlpha(0.5);
+                pattern.setDepth(DEPTH.BACKGROUND + 1);
 
                 this.createVignette();
+                this.createBackgroundParticles();
                 this.createUI();
                 this.createGrid();
                 this.showIntro();
@@ -259,7 +169,7 @@
                 const vignette = this.add.graphics();
                 vignette.fillStyle(0x000000, 1);
                 vignette.fillRect(0, 0, width, height);
-                vignette.setAlpha(0.3);
+                vignette.setAlpha(0.2);
                 vignette.setBlendMode(Phaser.BlendModes.MULTIPLY);
                 vignette.setDepth(DEPTH.VIGNETTE);
             }
@@ -267,17 +177,31 @@
             showIntro() {
                 const { width, height } = this.cameras.main;
                 const readyText = this.add.text(width / 2, height / 2, 'READY?', { 
-                    fontSize: '200px', fill: '#ffff00', stroke: '#000', strokeThickness: 20 
+                    fontSize: '200px', 
+                    fill: '#ffff00', 
+                    stroke: '#000', 
+                    strokeThickness: 20 
                 }).setOrigin(0.5).setScale(0);
 
                 this.tweens.add({
-                    targets: readyText, scale: 1, duration: 500, ease: 'Back.easeOut',
+                    targets: readyText,
+                    scale: 1,
+                    duration: 500,
+                    ease: 'Back.easeOut',
                     onComplete: () => {
                         this.time.delayedCall(500, () => {
-                            readyText.setText('GO!').setFill('#00ff00');
+                            readyText.setText('GO!');
+                            readyText.setFill('#00ff00');
                             this.tweens.add({
-                                targets: readyText, scale: 2, alpha: 0, duration: 500,
-                                onComplete: () => { readyText.destroy(); this.startGame(); }
+                                targets: readyText,
+                                scale: 2,
+                                alpha: 0,
+                                duration: 500,
+                                ease: 'Power2',
+                                onComplete: () => {
+                                    readyText.destroy();
+                                    this.startGame();
+                                }
                             });
                         });
                     }
@@ -285,28 +209,69 @@
             }
 
             startGame() {
-                this.time.addEvent({ delay: 1000, callback: this.updateTimer, callbackScope: this, loop: true });
+                this.time.addEvent({
+                    delay: 1000,
+                    callback: this.updateTimer,
+                    callbackScope: this,
+                    loop: true
+                });
                 this.scheduleNextSpawn();
                 this.input.on('pointerdown', (pointer, currentlyOver) => {
-                    if (currentlyOver.length === 0) this.handleMiss(pointer.x, pointer.y);
+                    if (currentlyOver.length === 0) {
+                        this.handleMiss(pointer.x, pointer.y);
+                    }
                 });
+            }
+
+            createBackgroundParticles() {
+                const graphics = this.add.graphics();
+                graphics.fillStyle(0xffffff, 1);
+                graphics.fillCircle(10, 10, 10);
+                graphics.generateTexture('particle', 20, 20);
+                graphics.destroy();
+
+                const particles = this.add.particles(0, 0, 'particle', {
+                    x: { min: 0, max: CONFIG.width },
+                    y: { min: 0, max: CONFIG.height },
+                    scale: { min: 0.2, max: 0.8 },
+                    alpha: { start: 0.1, end: 0 },
+                    speed: { min: 5, max: 15 },
+                    angle: { min: 0, max: 360 },
+                    rotate: { min: 0, max: 360 },
+                    lifespan: 8000,
+                    frequency: 1000,
+                    blendMode: 'ADD'
+                });
+                particles.setDepth(DEPTH.BACKGROUND + 1);
             }
 
             createUI() {
                 const { width } = this.cameras.main;
                 
                 this.titleText = this.add.text(width / 2, 350, 'WHACK-A-FREDDIE', { 
-                    fontFamily: 'Bungee', fontSize: '110px', fill: '#ffffff', stroke: '#000', strokeThickness: 12
+                    fontFamily: 'Bungee', 
+                    fontSize: '110px', 
+                    fill: '#ffffff',
+                    stroke: '#000',
+                    strokeThickness: 12,
+                    align: 'center'
                 }).setOrigin(0.5);
                 
                 this.scoreText = this.add.text(width / 2, 530, '00000', { 
-                    fontFamily: 'Roboto Mono', fontSize: '140px', fill: '#00ffcc', stroke: '#000', strokeThickness: 10
+                    fontFamily: 'Roboto Mono', 
+                    fontSize: '140px', 
+                    fill: '#00ffcc',
+                    stroke: '#000',
+                    strokeThickness: 10
                 }).setOrigin(0.5);
                 
                 this.add.text(width / 2, 440, 'SCORE', { fontSize: '40px', fill: '#ffffff' }).setOrigin(0.5);
 
                 this.timerText = this.add.text(width / 2, 670, '60', { 
-                    fontSize: '100px', fill: '#ff0055', stroke: '#000', strokeThickness: 5
+                    fontSize: '100px', 
+                    fill: '#ff0055',
+                    stroke: '#000',
+                    strokeThickness: 5
                 }).setOrigin(0.5);
 
                 this.comboContainer = this.add.container(width / 2, 800);
@@ -315,7 +280,10 @@
                 this.comboContainer.add([this.comboText, this.multiplierText]);
                 this.comboContainer.setAlpha(0);
                 
-                [this.titleText, this.scoreText, this.timerText, this.comboContainer].forEach(el => el.setDepth(DEPTH.UI));
+                this.titleText.setDepth(DEPTH.UI);
+                this.scoreText.setDepth(DEPTH.UI);
+                this.timerText.setDepth(DEPTH.UI);
+                this.comboContainer.setDepth(DEPTH.UI);
             }
 
             createGrid() {
@@ -334,6 +302,8 @@
                         hole.fillEllipse(x, y, CONFIG.holeRadius * 2, CONFIG.holeRadius * 1.2);
                         hole.lineStyle(4, 0x666666, 0.8);
                         hole.strokeEllipse(x, y, CONFIG.holeRadius * 2, CONFIG.holeRadius * 1.2);
+                        hole.lineStyle(8, 0x000000, 0.5);
+                        hole.strokeEllipse(x, y + 5, CONFIG.holeRadius * 1.9, CONFIG.holeRadius * 1.1);
                         hole.setDepth(DEPTH.HOLES);
                         const hitArea = this.add.ellipse(x, y, CONFIG.holeRadius * 2, CONFIG.holeRadius * 1.2).setInteractive();
                         hitArea.on('pointerdown', () => this.handleMiss(x, y));
@@ -369,25 +339,42 @@
                 let type = typeRoll < 0.15 ? 'decoy' : 'normal';
 
                 const spotlight = this.add.graphics();
-                spotlight.fillStyle(0x00ffcc, 0.1);
+                spotlight.fillStyle(0x00ffcc, 1);
                 spotlight.fillCircle(hole.x, hole.y, CONFIG.holeRadius * 1.5);
+                spotlight.setAlpha(0);
+                spotlight.setBlendMode(Phaser.BlendModes.ADD);
                 spotlight.setDepth(DEPTH.SPOTLIGHT);
+                
+                this.tweens.add({ targets: spotlight, alpha: 0.1, duration: 150 });
                 this.activeSpotlight = spotlight;
 
                 const nephew = this.createNephewGraphic(hole.x, hole.y, type);
                 nephew.type = type;
-                nephew.setDepth(DEPTH.NEPHEW).setInteractive(new Phaser.Geom.Circle(0, 0, 100), Phaser.Geom.Circle.Contains);
-                nephew.on('pointerdown', (p, lx, ly, event) => { event.stopPropagation(); this.handleHit(nephew, spotlight); });
+                nephew.setDepth(DEPTH.NEPHEW);
+                nephew.setInteractive(new Phaser.Geom.Circle(0, 0, 100), Phaser.Geom.Circle.Contains);
+                nephew.on('pointerdown', (pointer, localX, localY, event) => {
+                    event.stopPropagation();
+                    this.handleHit(nephew, spotlight);
+                });
 
                 this.activeNephew = nephew;
 
                 this.time.delayedCall(CONFIG.displayDuration, () => {
                     if (this.activeNephew === nephew) {
                         this.tweens.add({
-                            targets: [nephew, spotlight], alpha: 0, duration: 100,
+                            targets: [nephew, spotlight],
+                            alpha: 0,
+                            duration: 100,
                             onComplete: () => {
-                                nephew.destroy(); spotlight.destroy();
-                                if (type !== 'decoy') { this.score = Math.max(0, this.score - 1); this.resetCombo(); this.updateUI(); }
+                                nephew.destroy();
+                                spotlight.destroy();
+                                if (this.activeNephew === nephew) this.activeNephew = null;
+                                if (this.activeSpotlight === spotlight) this.activeSpotlight = null;
+                                if (type !== 'decoy') {
+                                    this.score = Math.max(0, this.score - 1);
+                                    this.resetCombo();
+                                    this.updateUI();
+                                }
                                 this.scheduleNextSpawn();
                             }
                         });
@@ -406,20 +393,29 @@
 
             handleHit(nephew, spotlight) {
                 if (this.isGameOver) return;
-                const { x, y, type } = nephew;
+                const type = nephew.type;
+                const x = nephew.x;
+                const y = nephew.y;
                 nephew.destroy();
-                if (spotlight) spotlight.destroy();
+                if (spotlight) {
+                    this.tweens.add({ targets: spotlight, alpha: 0, duration: 100, onComplete: () => spotlight.destroy() });
+                }
+                this.activeNephew = null;
+                this.activeSpotlight = null;
                 this.cameras.main.shake(100, 0.01);
 
                 if (type === 'decoy') {
                     this.score = Math.max(0, this.score - 1);
                     this.resetCombo();
                     this.showFloatingText(x, y, 'BAD! -1', '#ff0000');
+                    this.createExplosion(x, y, 0xff0000);
                 } else {
                     this.combo++;
                     this.updateMultiplier();
-                    this.score += (1 * this.multiplier);
-                    this.showFloatingText(x, y, `+${1 * this.multiplier}`, '#00ffcc');
+                    const totalPoints = 1 * this.multiplier;
+                    this.score += totalPoints;
+                    this.showFloatingText(x, y, `+${totalPoints}`, '#00ffcc');
+                    this.createExplosion(x, y, 0x00ffcc);
                     if (this.combo >= 3) {
                         this.comboContainer.setAlpha(1);
                         this.tweens.add({ targets: this.comboContainer, scale: 1.2, duration: 100, yoyo: true });
@@ -438,13 +434,32 @@
                 this.cameras.main.flash(50, 100, 0, 0, 0.2);
             }
 
+            createExplosion(x, y, color) {
+                for (let i = 0; i < 12; i++) {
+                    const angle = Phaser.Math.DegToRad(i * 30);
+                    const dist = Phaser.Math.Between(50, 150);
+                    const circle = this.add.circle(x, y, Phaser.Math.Between(5, 15), color);
+                    this.tweens.add({
+                        targets: circle,
+                        x: x + Math.cos(angle) * dist,
+                        y: y + Math.sin(angle) * dist,
+                        alpha: 0, scale: 0, duration: 400,
+                        onComplete: () => circle.destroy()
+                    });
+                }
+            }
+
             resetCombo() {
-                if (this.combo > 0) this.tweens.add({ targets: this.comboContainer, alpha: 0, duration: 200 });
-                this.combo = 0; this.multiplier = 1; this.updateUI();
+                if (this.combo > 0) this.tweens.add({ targets: this.comboContainer, alpha: 0, scale: 0.5, duration: 200 });
+                this.combo = 0;
+                this.multiplier = 1;
+                this.updateUI();
             }
 
             updateMultiplier() {
-                this.multiplier = this.combo >= 6 ? 3 : (this.combo >= 3 ? 2 : 1);
+                if (this.combo >= 6) this.multiplier = 3;
+                else if (this.combo >= 3) this.multiplier = 2;
+                else this.multiplier = 1;
             }
 
             updateUI() {
@@ -454,32 +469,54 @@
                 if (this.multiplier > 1) this.multiplierText.setFill(this.multiplier >= 3 ? '#ff00ff' : '#00ff00');
             }
 
-            showFloatingText(x, y, text, color) {
-                const txt = this.add.text(x, y, text, { fontSize: '80px', fill: color, fontWeight: 'bold', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5);
-                this.tweens.add({ targets: txt, y: y - 200, alpha: 0, duration: 600, onComplete: () => txt.destroy() });
+            showFloatingText(x, y, text, color, scale = 1) {
+                const txt = this.add.text(x, y, text, { fontSize: '80px', fill: color, fontWeight: 'bold', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setScale(scale);
+                txt.setDepth(DEPTH.UI + 1);
+                this.tweens.add({ targets: txt, y: y - 200, alpha: 0, scale: scale * 1.5, duration: 600, onComplete: () => txt.destroy() });
             }
 
             endGame() {
                 this.isGameOver = true;
-                const high = parseInt(localStorage.getItem('freddie_high_score_arcade') || '0');
-                if (this.score > high) localStorage.setItem('freddie_high_score_arcade', this.score.toString());
-                this.scene.start('GameOverScene', { score: this.score, highScore: Math.max(this.score, high) });
+                if (this.activeNephew) this.activeNephew.destroy();
+                if (this.activeSpotlight) this.activeSpotlight.destroy();
+                const highScore = parseInt(localStorage.getItem('freddie_high_score_arcade') || '0');
+                if (this.score > highScore) localStorage.setItem('freddie_high_score_arcade', this.score.toString());
+                this.scene.start('GameOverScene', { score: this.score, highScore: Math.max(this.score, highScore) });
             }
         }
 
+        // --- GAME OVER SCENE ---
         class GameOverScene extends Phaser.Scene {
-            constructor() { super('GameOverScene'); }
+            constructor() {
+                super('GameOverScene');
+            }
+
             create(data) {
                 const { width, height } = this.cameras.main;
-                createSpaceBackground(this);
-                this.add.rectangle(width/2, height/2, width, height, 0x000000, 0.7);
-
+                this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.9);
                 this.add.text(width / 2, height / 2 - 400, 'GAME OVER', { fontSize: '140px', fill: '#ff0055', stroke: '#fff', strokeThickness: 10 }).setOrigin(0.5);
+                this.add.text(width / 2, height / 2 - 150, `FINAL SCORE`, { fontSize: '50px', fill: '#aaa' }).setOrigin(0.5);
                 this.add.text(width / 2, height / 2 - 50, `${data.score}`, { fontSize: '120px', fill: '#00ffcc' }).setOrigin(0.5);
                 this.add.text(width / 2, height / 2 + 100, `BEST: ${data.highScore}`, { fontSize: '60px', fill: '#ffcc00' }).setOrigin(0.5);
 
-                createPremiumButton(this, width / 2, height / 2 + 350, 'PLAY AGAIN', () => {
-                    this.scene.start('MainScene');
+                const restartBtn = this.add.container(width / 2, height / 2 + 350);
+                const bg = this.add.rectangle(0, 0, 600, 150, 0x00ffcc).setInteractive();
+                const txt = this.add.text(0, 0, 'PLAY AGAIN', { fontSize: '60px', fill: '#000' }).setOrigin(0.5);
+                restartBtn.add([bg, txt]);
+
+                bg.on('pointerdown', () => {
+                    this.tweens.add({ targets: restartBtn, scale: 0.9, duration: 50, yoyo: true, onComplete: () => this.scene.start('MainScene') });
+                });
+
+                this.time.addEvent({
+                    delay: 200,
+                    callback: () => {
+                        const x = Phaser.Math.Between(0, width);
+                        const y = Phaser.Math.Between(0, height);
+                        const star = this.add.star(x, y, 5, 5, 15, 0xffffff);
+                        this.tweens.add({ targets: star, alpha: 0, scale: 2, duration: 500, onComplete: () => star.destroy() });
+                    },
+                    loop: true
                 });
             }
         }
@@ -489,9 +526,12 @@
             parent: 'game-container',
             width: CONFIG.width,
             height: CONFIG.height,
-            scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH
+            },
             scene: [TitleScene, MainScene, GameOverScene],
-            backgroundColor: '#050505'
+            backgroundColor: '#0a0a0a'
         };
 
         new Phaser.Game(config);
